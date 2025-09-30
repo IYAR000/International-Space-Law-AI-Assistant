@@ -1,0 +1,68 @@
+version: '3.8'
+
+services:
+  # Data Collection API
+  data-collection-api:
+    build:
+      context: ./apis/data_collection_api
+      dockerfile: Dockerfile
+    ports:
+      - "8001:8001"
+    environment:
+      - DB_TYPE=postgresql
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_NAME=space_law_db
+      - DB_USER=space_law_user
+      - DB_PASSWORD=space_law_password
+    depends_on:
+      - postgres
+    volumes:
+      - ./shared:/app/shared
+      - ./database:/app/database
+    restart: unless-stopped
+
+  # Legal Analysis API
+  legal-analysis-api:
+    build:
+      context: ./apis/legal_analysis_api
+      dockerfile: Dockerfile
+    ports:
+      - "8002:8002"
+    environment:
+      - DB_TYPE=postgresql
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_NAME=space_law_db
+      - DB_USER=space_law_user
+      - DB_PASSWORD=space_law_password
+    depends_on:
+      - postgres
+    volumes:
+      - ./shared:/app/shared
+      - ./database:/app/database
+    restart: unless-stopped
+
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15
+    environment:
+      - POSTGRES_DB=space_law_db
+      - POSTGRES_USER=space_law_user
+      - POSTGRES_PASSWORD=space_law_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql
+    restart: unless-stopped
+
+  # Redis for caching (optional)
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
