@@ -118,3 +118,7 @@ class DatabaseManager:
 # Global database configuration
 db_config = DatabaseConfig()
 db_manager = DatabaseManager(db_config)
+
+
+
+

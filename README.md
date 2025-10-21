@@ -17,10 +17,23 @@ The system consists of:
 International-Space-Law-AI-Assistant/
 ├── apis/
 │   ├── data_collection_api/     # Data collection service
+│   │   ├── Containerfile        # Podman container definition
+│   │   ├── Dockerfile          # Docker container definition (legacy)
+│   │   └── main.py
 │   └── legal_analysis_api/      # Legal analysis service
+│       ├── Containerfile        # Podman container definition
+│       ├── Dockerfile          # Docker container definition (legacy)
+│       └── main.py
 ├── shared/                      # Shared models and utilities
 ├── database/                    # Database schema and connection
-├── docker-compose.yml          # Container orchestration
+├── scripts/                     # Helper scripts for Podman/Docker
+│   ├── setup-podman.sh         # Podman setup (Linux/macOS)
+│   ├── start-podman.bat        # Podman start (Windows)
+│   └── migrate-from-docker.sh  # Docker to Podman migration
+├── docker-compose.yml          # Docker orchestration (legacy)
+├── podman-compose.yml          # Podman orchestration (recommended)
+├── PODMAN-DEPLOYMENT.md        # Comprehensive Podman guide
+├── README-PODMAN.md            # Podman-specific documentation
 └── config.env.example          # Environment configuration
 ```
 
@@ -158,8 +171,20 @@ cd apis/legal_analysis_api
 python main.py
 ```
 
-### Docker Deployment
+### Container Deployment
 
+#### Podman (Recommended)
+```bash
+# Quick start with Podman
+scripts\start-podman.bat  # Windows
+./scripts/setup-podman.sh && podman-compose -f podman-compose.yml up -d  # Linux/macOS
+
+# Manual Podman commands
+podman-compose -f podman-compose.yml up -d --build
+podman-compose -f podman-compose.yml down
+```
+
+#### Docker (Legacy Support)
 ```bash
 # Build and run with Docker Compose
 docker-compose up --build
@@ -168,6 +193,8 @@ docker-compose up --build
 docker build -t data-collection-api ./apis/data_collection_api/
 docker build -t legal-analysis-api ./apis/legal_analysis_api/
 ```
+
+**Note**: This project has been optimized for Podman with enhanced security features. Docker support is maintained for compatibility.
 
 ## Environment Configuration
 
@@ -233,11 +260,13 @@ The APIs are designed to be consumed by a local Windows Rust executable that wil
 
 ## Security Considerations
 
-- CORS enabled for cross-origin requests
-- Input validation with Pydantic models
-- SQL injection prevention with parameterized queries
-- Environment-based configuration management
-- Non-root container execution
+- **Container Security**: Rootless Podman containers with SELinux labeling
+- **Network Security**: CORS enabled for cross-origin requests
+- **Input Validation**: Pydantic models for request validation
+- **Database Security**: SQL injection prevention with parameterized queries
+- **Configuration**: Environment-based configuration management
+- **Privilege Escalation**: No new privileges policy enforced
+- **Filesystem**: Read-only container filesystems with temporary mounts
 
 ## Contributing
 
@@ -253,4 +282,28 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 ## Support
 
-For questions or issues, please create an issue in the repository or contact the development team.
+For questions or issues:
+
+1. **Podman Issues**: Check [PODMAN-DEPLOYMENT.md](PODMAN-DEPLOYMENT.md) for detailed troubleshooting
+2. **Quick Start**: See [README-PODMAN.md](README-PODMAN.md) for Podman-specific instructions
+3. **General Issues**: Create an issue in the repository or contact the development team
+
+## Migration from Docker
+
+If you're currently using Docker and want to migrate to Podman:
+
+```bash
+# Run the automated migration script
+./scripts/migrate-from-docker.sh
+
+# Or manually:
+docker-compose down
+podman-compose -f podman-compose.yml up -d --build
+```
+
+**Benefits of Podman over Docker:**
+- Better security with rootless containers
+- No daemon required
+- SELinux integration
+- Lower resource usage
+- Docker-compatible commands

@@ -104,3 +104,5 @@ CREATE INDEX IF NOT EXISTS idx_analyses_type ON legal_analyses(analysis_type);
 
 CREATE INDEX IF NOT EXISTS idx_boundaries_jurisdiction ON jurisdictional_boundaries(jurisdiction);
 CREATE INDEX IF NOT EXISTS idx_logs_timestamp ON api_logs(timestamp);
+
+
