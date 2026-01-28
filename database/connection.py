@@ -4,8 +4,14 @@ Database connection and configuration for International Space Law AI Assistant
 import os
 from typing import Optional
 import sqlite3
-import psycopg2
-import pymysql
+try:
+    import psycopg2
+except ImportError:
+    psycopg2 = None
+try:
+    import pymysql
+except ImportError:
+    pymysql = None
 from contextlib import contextmanager
 import logging
 
@@ -51,6 +57,8 @@ class DatabaseManager:
                 connection = sqlite3.connect(self.config.sqlite_path)
                 connection.row_factory = sqlite3.Row
             elif self.config.db_type == 'postgresql':
+                if psycopg2 is None:
+                    raise ImportError("psycopg2 is not installed. Install with: pip install psycopg2-binary")
                 connection = psycopg2.connect(
                     host=self.config.host,
                     port=self.config.port,
@@ -59,6 +67,8 @@ class DatabaseManager:
                     password=self.config.password
                 )
             elif self.config.db_type == 'mysql':
+                if pymysql is None:
+                    raise ImportError("pymysql is not installed. Install with: pip install pymysql")
                 connection = pymysql.connect(
                     host=self.config.host,
                     port=int(self.config.port),
