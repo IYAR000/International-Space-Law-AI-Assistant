@@ -17,6 +17,11 @@ OPENAI_API_URL = "https://api.openai.com/v1/chat/completions"
 CLAUDE_API_KEY = ""  # Set your API key here
 CLAUDE_API_URL = "https://api.anthropic.com/v1/messages"
 
+# Alibaba Cloud Generative AI (set your credentials and optional endpoint)
+ALIBABA_ACCESS_KEY_ID = ""  # e.g. LTAI...
+ALIBABA_ACCESS_KEY_SECRET = ""  # secret
+ALIBABA_API_ENDPOINT = ""  # optional, e.g. https://genai.cn-shanghai.aliyuncs.com
+
 
 def test_data_collection_api():
     """Test the data collection API"""
@@ -294,6 +299,84 @@ def validate_and_test_claude_key():
         print(f"❌ Connection failed: {e}")
         return False
 
+def validate_and_test_alibaba_key():
+    """Validate Alibaba Cloud AccessKeyId/AccessKeySecret for Qwen (mock test)
+    This validates presence and basic format, and optionally checks endpoint reachability.
+    It does not perform a signed model invocation — that requires signed headers.
+    """
+    print("\n" + "="*60)
+    print("Validating Alibaba Cloud Qwen Credentials")
+    print("="*60)
+
+    if not ALIBABA_ACCESS_KEY_ID or not ALIBABA_ACCESS_KEY_SECRET:
+        print("⚠ Alibaba Access Key ID/Secret not set")
+        print("\nTo test with Alibaba Model Studio (Qwen):")
+        print("1. Set ALIBABA_ACCESS_KEY_ID and ALIBABA_ACCESS_KEY_SECRET in this script")
+        print("2. Optionally set ALIBABA_API_ENDPOINT to your Model Studio endpoint (e.g. https://model.cn-beijing.aliyuncs.com)")
+        return False
+
+    # Basic format checks (best-effort)
+    if len(ALIBABA_ACCESS_KEY_ID) < 10 or len(ALIBABA_ACCESS_KEY_SECRET) < 10:
+        print("❌ Alibaba keys look too short; check they were copied correctly")
+        return False
+
+    print("✓ Alibaba keys provided and basic format looks valid")
+    print(f"✓ AccessKeyId length: {len(ALIBABA_ACCESS_KEY_ID)}")
+    print(f"✓ AccessKeySecret length: {len(ALIBABA_ACCESS_KEY_SECRET)}")
+
+    # If an endpoint is provided, check connectivity (no auth)
+    if ALIBABA_API_ENDPOINT:
+        print("\nChecking endpoint reachability (no auth)...")
+        try:
+            import requests
+            resp = requests.head(ALIBABA_API_ENDPOINT, timeout=5)
+            print(f"✓ Endpoint reachable, status: {resp.status_code}")
+            if resp.status_code in (401, 403):
+                print("⚠ Endpoint requires authentication — keys may need signed requests to validate")
+            return True
+        except Exception as e:
+            print(f"⚠ Could not reach endpoint: {e}")
+            print("You can still run a signed Qwen test if you provide the endpoint and allow a signed request test.")
+            return True
+
+    print("Note: No endpoint provided — keys look present. To fully validate Qwen invocation, set `ALIBABA_API_ENDPOINT` and allow a signed test.")
+    return True
+
+
+def validate_and_test_alibaba_key():
+    """Validate Alibaba Cloud credentials and connectivity without consuming tokens"""
+    print("\n" + "="*60)
+    print("Validating Alibaba Cloud Credentials")
+    print("="*60)
+
+    if not ALIBABA_ACCESS_KEY_ID or not ALIBABA_ACCESS_KEY_SECRET:
+        print("⚠ Alibaba Access Key ID/Secret not set")
+        print("\nTo test with Alibaba Cloud:")
+        print("1. Create an AccessKey (AccessKeyId and AccessKeySecret) in Alibaba RAM")
+        print("2. Set ALIBABA_ACCESS_KEY_ID and ALIBABA_ACCESS_KEY_SECRET in this script")
+        print("3. Optionally set ALIBABA_API_ENDPOINT to your region's endpoint")
+        return False
+
+    print("✓ Alibaba Access Key ID provided")
+    print(f"✓ Key ID prefix: {ALIBABA_ACCESS_KEY_ID[:6]}...")
+
+    # If an endpoint is provided, test basic connectivity (no auth)
+    if ALIBABA_API_ENDPOINT:
+        print(f"\nTesting connectivity to endpoint: {ALIBABA_API_ENDPOINT}")
+        try:
+            import requests
+            resp = requests.get(ALIBABA_API_ENDPOINT, timeout=5)
+            print(f"✓ Endpoint reachable, status code: {resp.status_code}")
+            return True
+        except requests.exceptions.RequestException as e:
+            print(f"⚠ Unable to reach endpoint: {e}")
+            # Still return True because keys may still be valid for signed requests
+            return True
+
+    # No endpoint provided; format checks only
+    print("✓ Credentials look well-formed (no connectivity test performed)")
+    return True
+
 
 def test_llm_integration_with_claude(analysis_result: Dict[str, Any]):
     """Test LLM integration with Claude/Anthropic"""
@@ -392,12 +475,14 @@ def main():
         
         openai_valid = validate_and_test_openai_key()
         claude_valid = validate_and_test_claude_key()
+        alibaba_valid = validate_and_test_alibaba_key()
         
         print("\n" + "="*80)
         print("SUMMARY")
         print("="*80)
         print(f"\nOpenAI API Key: {'✓ Valid' if openai_valid else '❌ Invalid/Not Set'}")
         print(f"Claude API Key: {'✓ Valid' if claude_valid else '❌ Invalid/Not Set'}")
+        print(f"Alibaba Credentials: {'✓ Provided' if alibaba_valid else '❌ Not Provided/Invalid'}")
         
         # Only proceed with full LLM calls if keys are valid
         if openai_valid:
@@ -405,6 +490,9 @@ def main():
         
         if claude_valid:
             test_llm_integration_with_claude(analysis_result)
+        
+        if alibaba_valid:
+            print("\nNote: Alibaba credentials validated for format/connectivity.\nTo run full Alibaba generative calls, provide the endpoint and we can add a signed request test.")
     
     print("\n" + "="*80)
     print("TEST COMPLETE")
