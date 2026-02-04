@@ -4,6 +4,7 @@ Test script for LLM integration with the legal analysis API endpoints
 import requests
 import json
 from typing import Dict, Any
+from shared import llm_selector
 
 # API Configuration
 DATA_COLLECTION_API = "http://localhost:8001"
@@ -484,15 +485,45 @@ def main():
         print(f"Claude API Key: {'✓ Valid' if claude_valid else '❌ Invalid/Not Set'}")
         print(f"Alibaba Credentials: {'✓ Provided' if alibaba_valid else '❌ Not Provided/Invalid'}")
         
-        # Only proceed with full LLM calls if keys are valid
-        if openai_valid:
-            test_llm_integration_with_openai(analysis_result)
-        
-        if claude_valid:
+        # Provider selection (Qwen -> Claude -> OpenAI)
+        env = {
+            "ALIBABA_ACCESS_KEY_ID": ALIBABA_ACCESS_KEY_ID,
+            "ALIBABA_ACCESS_KEY_SECRET": ALIBABA_ACCESS_KEY_SECRET,
+            "ALIBABA_API_ENDPOINT": ALIBABA_API_ENDPOINT,
+            "CLAUDE_API_KEY": CLAUDE_API_KEY,
+            "OPENAI_API_KEY": OPENAI_API_KEY,
+        }
+
+        provider = llm_selector.select_provider(env)
+        print(f"\nSelected provider: {provider}")
+
+        if provider == "alibaba":
+            try:
+                print("\nCalling Alibaba Qwen (signed request)...")
+                resp = llm_selector.call_qwen_signed(
+                    endpoint=ALIBABA_API_ENDPOINT,
+                    model="qwen-large",
+                    prompt=json.dumps(analysis_result, indent=2),
+                    access_key=ALIBABA_ACCESS_KEY_ID,
+                    access_secret=ALIBABA_ACCESS_KEY_SECRET,
+                )
+                print("✓ Alibaba response:")
+                print(json.dumps(resp, indent=2)[:2000])
+            except Exception as e:
+                print(f"✗ Alibaba request failed: {e}")
+                # fallback to Claude if available
+                if claude_valid:
+                    print("Falling back to Claude...")
+                    test_llm_integration_with_claude(analysis_result)
+                elif openai_valid:
+                    print("Falling back to OpenAI...")
+                    test_llm_integration_with_openai(analysis_result)
+        elif provider == "claude":
             test_llm_integration_with_claude(analysis_result)
-        
-        if alibaba_valid:
-            print("\nNote: Alibaba credentials validated for format/connectivity.\nTo run full Alibaba generative calls, provide the endpoint and we can add a signed request test.")
+        elif provider == "openai":
+            test_llm_integration_with_openai(analysis_result)
+        else:
+            print("No LLM credentials found; skipping full LLM tests.")
     
     print("\n" + "="*80)
     print("TEST COMPLETE")
